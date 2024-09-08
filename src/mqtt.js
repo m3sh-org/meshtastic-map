@@ -173,12 +173,12 @@ const mqttPassword = options["mqtt-password"] ?? "large4cats";
 const mqttClientId = options["mqtt-client-id"] ?? null;
 const mqttTopics = options["mqtt-topic"] ?? ["msh/#"];
 const collectServiceEnvelopes = options["collect-service-envelopes"] ?? false;
-const collectPositions = options["collect-positions"] ?? true;
+const collectPositions = options["collect-positions"] ?? false;
 const collectTextMessages = options["collect-text-messages"] ?? false;
 const ignoreDirectMessages = options["ignore-direct-messages"] ?? false;
-const collectWaypoints = options["collect-waypoints"] ?? true;
+const collectWaypoints = options["collect-waypoints"] ?? false;
 const collectNeighbourInfo = options["collect-neighbour-info"] ?? false;
-const collectMapReports = options["collect-map-reports"] ?? true;
+const collectMapReports = options["collect-map-reports"] ?? false;
 const decryptionKeys = options["decryption-keys"] ?? [
     "1PG7OiApB1nwvP+rz05pAQ==", // add default "AQ==" decryption key
 ];
@@ -655,8 +655,12 @@ client.on("message", async (topic, message) => {
         }
 
         const logKnownPacketTypes = false;
-        const logUnknownPacketTypes = false;
+	const logUnknownPacketTypes = false;
+	const logPortnum = false;
         const portnum = envelope.packet?.decoded?.portnum;
+	if(logPortnum){
+	    console.log("portnum = ", portnum);
+	}
 
         if(portnum === 1) {
 
@@ -700,7 +704,6 @@ client.on("message", async (topic, message) => {
         }
 
         else if(portnum === 3) {
-
             const position = Position.decode(envelope.packet.decoded.payload);
 
             if(logKnownPacketTypes){
@@ -709,7 +712,11 @@ client.on("message", async (topic, message) => {
                     position: position,
                 });
             }
-
+            if(!collectPositions){
+                return;
+		//return and don't send to db
+            }
+	    // continue and
             // update node position in db
             if(position.latitudeI != null && position.longitudeI){
                 try {
@@ -727,10 +734,6 @@ client.on("message", async (topic, message) => {
                 } catch (e) {
                     console.error(e);
                 }
-            }
-
-            if(!collectPositions){
-                return;
             }
 
             try {
@@ -771,7 +774,6 @@ client.on("message", async (topic, message) => {
         }
 
         else if(portnum === 4) {
-
             const user = User.decode(envelope.packet.decoded.payload);
 
             if(logKnownPacketTypes) {
@@ -1116,7 +1118,6 @@ client.on("message", async (topic, message) => {
         }
 
         else if(portnum === 73) {
-
             const mapReport = MapReport.decode(envelope.packet.decoded.payload);
 
             // congrats! you got blocked for spamming map reports with 0 sec interval. your map reports will be ignored.
